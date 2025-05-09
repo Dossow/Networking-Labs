@@ -6,10 +6,10 @@ Este proyecto automatiza la recolección de información de una red Cisco simula
 ## 🎯 Objetivo
 - Automatizar la documentación de la topología de red.
 - Parsear la información de dispositivos vecinos, interfaces IP, VLANs y protocolos de enrutamiento.
-- Presentar los resultados de forma clara y exportable (formato csv u json).
+- Presentar los resultados de forma clara y exportable.
 
 ## 🛠️ Tecnologías Utilizadas
-- Python (Netmiko, TextFSM)
+- Python 
 - Docker
 - Git
 - GNS3 Server 
@@ -17,9 +17,6 @@ Este proyecto automatiza la recolección de información de una red Cisco simula
 ## 🖥️ Requisitos de la topología (GNS3)
 - 4 dispositivos Cisco (routers y/o switches).
 - Acceso vía SSH/Telnet habilitado.
-
-## 📂 Estructura del proyecto
-Networking-Labs/ ├── docker/ │ └── Dockerfile ├── scripts/ │ ├── connect_devices.py │ ├── parse_outputs.py │ └── generate_report.py ├── requirements.txt ├── README.md └── .gitignore
 
 
 ## ⚙️ ¿Como descargo el proyecto?
@@ -34,21 +31,25 @@ Networking-Labs/ ├── docker/ │ └── Dockerfile ├── scripts/ �
 2. 🐳 Construye la imagen docker
 
 ```bash
-docker build -t Networking-Labs .
+docker build -t inventario-red .
 ```
 3. 🐳 Ejecuta el contenedor
 
 ```bash
 docker run --rm -v $(pwd)/scripts:/app Networking-Labs python connect_devices.py
 ```
-- Los reportes se generaran en el directorio  ```/reports ```
+- Los outputs del parseo son guardados en el directorio ```/reports ```
 
   ## 🔐 Variables de entorno
 
 ```bash
-SSH_USERNAME=admin
-SSH_PASSWORD=cisco123
-DEVICE_IPS=192.168.1.1,192.168.1.2,192.168.1.3,192.168.1.4
+R1 = {
+    "device_type": "cisco_ios",
+    "host": "10.10.10.1",
+    "username": "cisco",
+    "password": "cisco123",
+    "secret": "cisco123",
+}
 ```
 
 ## ✨ Funcionalidades
@@ -56,6 +57,7 @@ DEVICE_IPS=192.168.1.1,192.168.1.2,192.168.1.3,192.168.1.4
 Conexión automática a múltiples dispositivos y recolección de datos de:
 
 - Vecinos CDP/LLDP.
+- Uptime.
 - Estado de interfaces IP.
 - Configuración de VLANs y routing dinámico.
 - Reporte en formatos CSV, JSON o diagramas de red.
