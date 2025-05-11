@@ -11,8 +11,9 @@ Este proyecto automatiza la recolección de información de una red Cisco simula
 ## 🛠️ Tecnologías Utilizadas
 - Python 
 - Docker
-- Git
-- GNS3 Server 
+- GNS3 Server
+- SSH (Ver. 1.9)
+- Ubuntu (Dev Env).
 
 ## 🖥️ Requisitos de la topología (GNS3)
 - 4 dispositivos Cisco (routers y/o switches).
@@ -31,14 +32,40 @@ Este proyecto automatiza la recolección de información de una red Cisco simula
 2. 🐳 Construye la imagen docker
 
 ```bash
-docker build -t inventario-red .
+   docker build -t inventario-red-cisco .
 ```
 3. 🐳 Ejecuta el contenedor
 
 ```bash
-docker run --rm -v $(pwd)/scripts:/app Networking-Labs python connect_devices.py
+   docker run --network host inventario-red-cisco .
 ```
-- Los outputs del parseo son guardados en el directorio ```/reports ```
+- Los outputs del parseo son guardados en el sus directorios correspondientes dentro del contenedor.
+
+4. 🐳 Configuración necesaria dentro del contenedor
+
+```bash
+   nano /etc/ssh/ssh_config
+
+Host 10.10.10.1
+    KexAlgorithms +diffie-hellman-group14-sha1
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa
+    
+Host 10.10.10.2
+    KexAlgorithms +diffie-hellman-group14-sha1
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa
+    
+Host 10.10.10.3
+    KexAlgorithms +diffie-hellman-group14-sha1
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa
+    
+Host 10.10.10.4
+    KexAlgorithms +diffie-hellman-group14-sha1
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa
+```
 
   ## 🔐 Variables de entorno
 
@@ -68,6 +95,6 @@ Conexión automática a múltiples dispositivos y recolección de datos de:
 - Uptime.
 - Estado de interfaces IP.
 - Configuración de VLANs y routing dinámico.
-- Reporte en formatos CSV, JSON o diagramas de red.
+- Reporte en formatos CSV o diagramas de red.
 
 ![topolista drawio](https://github.com/user-attachments/assets/aafc6135-8d3f-4e59-8ea3-01407ef4f49d)
