@@ -43,12 +43,20 @@ docker run --rm -v $(pwd)/scripts:/app Networking-Labs python connect_devices.py
   ## 🔐 Variables de entorno
 
 ```bash
-R1 = {
+# === 3. Lista de routers ===
+routers = [
+    {"host": "10.10.10.1", "alias": "R1"},
+    {"host": "10.10.10.2", "alias": "R2"},
+    {"host": "10.10.10.3", "alias": "R3"},
+    {"host": "10.10.10.4", "alias": "R4"}
+]
+
+# Credenciales comunes
+common = {
     "device_type": "cisco_ios",
-    "host": "10.10.10.1",
     "username": "cisco",
-    "password": "cisco123",
-    "secret": "cisco123",
+    "password": "cisco",
+    "global_delay_factor": 2
 }
 ```
 
