@@ -1,110 +1,75 @@
-import csv
-import os
-import time
-import textfsm
-from getpass import getpass
 from netmiko import ConnectHandler
+import os
+from datetime import datetime
+from pathlib import Path
 
-# Crear carpeta 'reportes' si no existe
-output_dir = "reportes"
-os.makedirs(output_dir, exist_ok=True)
+# === 1. Forzar algoritmos SSH antiguos ===
+ssh_config = """
+Host *
+    KexAlgorithms +diffie-hellman-group14-sha1
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa
+"""
 
-# Ruta completa para el archivo CSV
-output_file = os.path.join(output_dir, 'reports.csv')
+ssh_dir = Path.home() / ".ssh"
+ssh_dir.mkdir(exist_ok=True)
+config_path = ssh_dir / "config"
 
-# Definición de dispositivos
-R1 = {
-    "device_type": "cisco_ios",
-    "host": "10.10.10.1",
-    "username": "cisco",
-    "password": "cisco123",
-    "secret": "cisco123",
-}
-R2 = {
-    "device_type": "cisco_ios",
-    "host": "10.10.10.2",
-    "username": "cisco",
-    "password": "cisco123",
-    "secret": "cisco123",
-}
-R3 = {
-    "device_type": "cisco_ios",
-    "host": "10.10.10.3",
-    "username": "cisco",
-    "password": "cisco123",
-    "secret": "cisco123",
-}
-R4 = {
-    "device_type": "cisco_ios",
-    "host": "10.10.10.4",
-    "username": "cisco",
-    "password": "cisco123",
-    "secret": "cisco123",
-}
+with open(config_path, "w") as f:
+    f.write(ssh_config)
 
-devices = [R1, R2, R3, R4]  # Corregido: R2 se repetía y R3 no estaba
+os.chmod(config_path, 0o600)
 
-# Definición de encabezados del CSV
-headers = [
-    "Nombre dispositivo local",
-    "Plataforma de hardware",
-    "Número de serie",
-    "Versión del sistema operativo",
-    "Uptime del dispositivo",
-    "Interfaz e IP dispositivo local",
-    "Nombre dispositivo vecino",
-    "Plataforma dispositivo vecino",
-    "IP del dispositivo vecino",
-    "Interfaz local",
-    "Interfaz remota",
-    "VLAN database"
+# === 2. Crear carpeta de reportes ===
+os.makedirs("reportes", exist_ok=True)
+
+# === 3. Lista de routers ===
+routers = [
+    {"host": "10.10.10.1", "alias": "R1"},
+    {"host": "10.10.10.2", "alias": "R2"},
+    {"host": "10.10.10.3", "alias": "R3"},
+    {"host": "10.10.10.4", "alias": "R4"}
 ]
 
-# Apertura del archivo CSV en carpeta 'reportes'
-with open(output_file, mode='w', newline='', encoding='utf-8') as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(headers)
+# Credenciales comunes
+common = {
+    "device_type": "cisco_ios",
+    "username": "cisco",
+    "password": "cisco",
+    "global_delay_factor": 2
+}
 
-    for device in devices:
-        net_connect = ConnectHandler(**device)
-        net_connect.enable()
+# === 4. Comandos para cada router ===
+comandos = {
+    "show version": "version.txt",
+    "show inventory": "inventario.txt",
+    "show ip interface brief": "ip_interface.txt",
+    "show cdp neighbors detail": "vecinos.txt",
+    "show vlan brief": "vlan.txt"
+}
 
-        datos_show_version = net_connect.send_command("show version", use_textfsm=True)
-        datos_show_ip_interface_brief = net_connect.send_command("show ip interface brief", use_textfsm=True)
-        datos_show_cdp_neighbor_detail = net_connect.send_command("show cdp neighbor detail", use_textfsm=True)
-        datos_show_vlan = net_connect.send_command("show vlan", use_textfsm=True)
+for router in routers:
+    alias = router["alias"]
+    host = router["host"]
+    print(f"\n🔌 Conectando a {alias} ({host})...")
 
-        hostname = net_connect.find_prompt().strip('#')
+    try:
+        connection = ConnectHandler(**{**common, "ip": host})
+        hostname = connection.send_command("show run | include hostname").split()[-1]
+        fecha = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        carpeta_router = f"reportes/{alias}_{fecha}"
+        os.makedirs(carpeta_router, exist_ok=True)
 
-        hardware = datos_show_version[0].get("hardware", [""])[0] if datos_show_version else ""
-        serial = datos_show_version[0].get("serial", [""])[0] if datos_show_version else ""
-        version = datos_show_version[0].get("version", "") if datos_show_version else ""
-        uptime = datos_show_version[0].get("uptime", "") if datos_show_version else ""
+        for cmd, archivo in comandos.items():
+            print(f"  Ejecutando: {cmd}")
+            salida = connection.send_command(cmd)
+            with open(f"{carpeta_router}/{archivo}", "w") as f:
+                f.write(f"Comando: {cmd}\nDispositivo: {hostname}\nFecha: {datetime.now()}\n\n")
+                f.write(salida)
 
-        interfaces_ips = [f"{intf['intf']} - {intf['ipaddr']}" for intf in datos_show_ip_interface_brief if intf.get("ipaddr")]
+        connection.disconnect()
+        print(f"✅ Reportes guardados en: {carpeta_router}")
 
-        for neighbor in datos_show_cdp_neighbor_detail:
-            neighbor_name = neighbor.get("destination_host", "")
-            neighbor_platform = neighbor.get("platform", "")
-            neighbor_ip = neighbor.get("management_ip", "")
-            local_port = neighbor.get("local_port", "")
-            remote_port = neighbor.get("remote_port", "")
+    except Exception as e:
+        print(f"❌ Error en {alias}: {e}")
 
-            vlan_ids = [vlan.get("vlan_id", "") for vlan in datos_show_vlan]
-
-            writer.writerow([
-                hostname,
-                hardware,
-                serial,
-                version,
-                uptime,
-                "; ".join(interfaces_ips),
-                neighbor_name,
-                neighbor_platform,
-                neighbor_ip,
-                local_port,
-                remote_port,
-                "; ".join(vlan_ids)
-            ])
-
-        net_connect.disconnect()
