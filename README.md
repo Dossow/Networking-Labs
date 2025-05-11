@@ -95,6 +95,6 @@ Conexión automática a múltiples dispositivos y recolección de datos de:
 - Uptime.
 - Estado de interfaces IP.
 - Configuración de VLANs y routing dinámico.
-- Reporte en formatos CSV o diagramas de red.
+- Reporte en formatos txt.
 
 ![topolista drawio](https://github.com/user-attachments/assets/aafc6135-8d3f-4e59-8ea3-01407ef4f49d)
